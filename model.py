@@ -21,6 +21,7 @@ def fun(a):
 def riseTime(Data,d_new, peaks_dist, peaks_dist_unprocess):
     rise_time = []
     left = []
+    leftval = []
     for i in peaks_dist:
         j = i
         while d_new[j]-d_new[j-1] >= -0.5:
@@ -31,13 +32,24 @@ def riseTime(Data,d_new, peaks_dist, peaks_dist_unprocess):
     for a in range(peaks_dist.size):
         rise_time.append(
             abs(Data['TIME'][peaks_dist[a]]-Data['TIME'][left[a]]))
+        leftval.append(
+            float(Data['TIME'][left[a]])        
+        )
+    
+    # plt.plot(Data['Time'],d_new)
+    # plt.plot(Data['Time'][peaks_dist], d_new[peaks_dist], "x")
+    # plt.plot(Data['Time'][left], d_new[left], "o")
+    # plt.savefig('foo.jpg')
+    # for i in range(len(left)):
+    #   left[i] = float(Data['TIME'][i])
 
-    return rise_time
+    return rise_time, leftval
 
 
 def decayTime(Data,d_new, peaks_dist, peaks_dist_unprocess):
     decay_time = []
     right = []
+    rightval = []
     for i in peaks_dist:
         j = i
         while d_new[j]-d_new[j+1] >= -0.5:
@@ -47,9 +59,11 @@ def decayTime(Data,d_new, peaks_dist, peaks_dist_unprocess):
         right.append(j)
     for a in range(peaks_dist.size):
       decay_time.append(abs(Data['TIME'][peaks_dist[a]]-Data['TIME'][right[a]]))
+      rightval.append(Data['TIME'][right[a]])
 
-
-    return decay_time
+    for i in range(len(right)) :
+      right[i] = float(Data['TIME'][i])
+    return decay_time, rightval
 
 def contourInfo(Data, d_new, peaks_dist, peaks_dist_unprocess):
   prominences, _, _ = peak_prominences(Data['RATE'], peaks_dist_unprocess)
@@ -67,25 +81,25 @@ def timesofpeaks(Data,d_new, peaks_dist, peaks_dist_unprocess):
     time_corresponding_peak_flux = Data['RATE'][peaks_dist_unprocess]
     max_peak_flux = max(Data['RATE'][peaks_dist_unprocess])
     average_peak_flux = np.average(Data['RATE'])
-    rise_time = riseTime(Data,d_new, peaks_dist , peaks_dist_unprocess)
-    decay_time = decayTime(Data,d_new, peaks_dist , peaks_dist_unprocess)
-    return time_of_occurance, time_corresponding_peak_flux, max_peak_flux, average_peak_flux, rise_time, decay_time
+    rise_time, left = riseTime(Data,d_new, peaks_dist , peaks_dist_unprocess)
+    decay_time, right = decayTime(Data,d_new, peaks_dist , peaks_dist_unprocess)
+    return time_of_occurance, time_corresponding_peak_flux, max_peak_flux, average_peak_flux, rise_time,left, decay_time, right
 
 
 
 def findpeaks(Data, d_new):
     all_peaks, _ = find_peaks(Data['RATE'])
     # Here 350 is approx backgroung flux
-    peaks_dist, _ = find_peaks(d_new, height=350, distance=500)
+    peaks_dist, _ = find_peaks(d_new, height=np.average(Data['RATE']), distance=500)
     peaks_dist_unprocess, _ = find_peaks(
-        Data['RATE'], height=350, distance=500)
+        Data['RATE'], height=np.average(Data['RATE']), distance=500)
     # print(peaks_dist)
     # print(peaks_dist_unprocess)
     return peaks_dist, peaks_dist_unprocess
 
 
-def returnable():
-    data = fits.open('icdata.ic')
+def returnable(extension):
+    data = fits.open('icdata' + extension)
 
     Data = data[1].data
 
@@ -95,10 +109,12 @@ def returnable():
     # print(d_new)
 
     peaks_dist, peaks_dist_unprocess = findpeaks(Data, d_new)
-    time_of_occurance, time_corresponding_peak_flux, max_peak_flux, average_peak_flux, rise_time, decay_time = timesofpeaks(Data,d_new, peaks_dist, peaks_dist_unprocess)
+    time_of_occurance, time_corresponding_peak_flux, max_peak_flux, average_peak_flux, rise_time,left, decay_time,right = timesofpeaks(Data,d_new, peaks_dist, peaks_dist_unprocess)
     prominences, contour_heights, prominences_prime, contour_heights_prime = contourInfo(Data, d_new, peaks_dist, peaks_dist_unprocess)
     xitems = Data['Time'].tolist()
     yitems = d_new.tolist()
+    print(type(left))
+    print(type(left[0]))
     returndict = {
         "x": xitems,  
         "y": yitems,
@@ -107,7 +123,9 @@ def returnable():
         "max_peak_flux" : str(max_peak_flux),
         "average_peak_flux" : str(average_peak_flux),
         "rise_time" : rise_time,
+        "left" : left,
         "decay_time" : decay_time,
+        "right" : right,
         "prominences" : prominences.tolist(),
         "contour_heights" : contour_heights.tolist(),
         "prominences_prime" : prominences_prime.tolist(),
@@ -122,7 +140,7 @@ def returnable():
 if __name__ == "__main__":
     returnable()
     pass
-    data = fits.open('icdata.ic')
+    data = fits.open('icdata.lc')
 
     Data = data[1].data
 

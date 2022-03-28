@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 
 from model import returnable
 import json
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -17,14 +18,19 @@ def hello_world():
 def uploader():
     if request.method == 'POST':
         f = request.files['file']
+        ext = os.path.splitext(f.filename)[-1]
         # f.save(secure_filename(f.filename))
-        f.save("icdata.ic")
-        returndata = returnable()
+        f.save("icdata" + ext)
+
+        # try:
+        returndata = returnable(ext)
         print(type(returndata))
         returnjsondata = json.dumps(returndata)
         print(type(returnjsondata))
         return returnjsondata
-        return 'file uploaded successfully'
+
+
+
 
 
 if __name__ == "__main__":
